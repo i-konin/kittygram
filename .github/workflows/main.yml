@@ -170,7 +170,7 @@ jobs:
             # Удаляем старые, неиспользуемые образы
             sudo docker image prune -f
             
-auto_tests:
+  auto_tests:
     name: Run autotests after deploy
     runs-on: ubuntu-latest
     needs: deploy 
@@ -191,7 +191,7 @@ auto_tests:
           URL: http://${{ secrets.HOST }}
         run: pytest tests/
 
-telegram-notify:
+  telegram-notify:
     name: Send Telegram notification
     runs-on: ubuntu-latest
     needs: auto_tests
