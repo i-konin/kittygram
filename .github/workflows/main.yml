@@ -137,15 +137,20 @@ jobs:
             # Создаем .env файл из секрета GitHub
             echo "${{ secrets.DOT_ENV }}" > .env
             
-            # Экспортируем переменную с логином Docker Hub для Compose
-            export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
+            echo "DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}" >> .env
+
+            # Логинимся в Docker Hub на сервере
+            echo "${{ secrets.DOCKERHUB_TOKEN }}" | sudo docker login \
+              -u "${{ secrets.DOCKERHUB_USERNAME }}" \
+              --password-stdin
 
             # Скачиваем свежие версии образов из Docker Hub
-            sudo docker compose -f docker-compose.production.yml pull
+            sudo docker-compose -f docker-compose.production.yml pull
             
             # Останавливаем старые контейнеры, если они были, и пересоздаем новые
             # Миграции применятся автоматически благодаря 'command' в backend-сервисе
-            sudo docker compose -f docker-compose.production.yml up -d
+            sudo docker-compose -f docker-compose.production.yml up -d
             
             # Удаляем старые, неиспользуемые образы
             sudo docker image prune -f
+            
