@@ -28,6 +28,22 @@ jobs:
       - name: Test with flake8
         run: python -m flake8 backend/
 
+      - name: Run backend tests
+        # Эта команда предполагает, что тесты бэкенда лежат в папке tests/
+        run: pytest tests/ 
+      
+      # --- Добавлен блок для тестов фронтенда ---
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18' # Укажите версию Node.js, которая используется в проекте
+
+      - name: Install frontend dependencies
+        run: cd frontend/ && npm install
+
+      - name: Run frontend tests
+        run: cd frontend/ && npm run test
+
   # --- Job для сборки backend ---
   build_backend_and_push_to_docker_hub:
     name: Build and Push backend
@@ -137,15 +153,60 @@ jobs:
             # Создаем .env файл из секрета GitHub
             echo "${{ secrets.DOT_ENV }}" > .env
             
-            # Экспортируем переменную с логином Docker Hub для Compose
-            export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
+            echo "DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}" >> .env
+
+            # Логинимся в Docker Hub на сервере
+            echo "${{ secrets.DOCKERHUB_TOKEN }}" | sudo docker login \
+              -u "${{ secrets.DOCKERHUB_USERNAME }}" \
+              --password-stdin
 
             # Скачиваем свежие версии образов из Docker Hub
-            sudo docker-compose -f docker-compose.production.yml pull
+            sudo docker compose -f docker-compose.production.yml pull
             
             # Останавливаем старые контейнеры, если они были, и пересоздаем новые
             # Миграции применятся автоматически благодаря 'command' в backend-сервисе
-            sudo docker-compose -f docker-compose.production.yml up -d
+            sudo docker compose -f docker-compose.production.yml up -d
             
             # Удаляем старые, неиспользуемые образы
             sudo docker image prune -f
+            
+  auto_tests:
+    name: Run autotests after deploy
+    runs-on: ubuntu-latest
+    needs: deploy 
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+
+      - name: Install test dependencies
+        run: pip install requests pytest pyyaml
+
+      - name: Run API tests
+        env:
+          URL: http://${{ secrets.HOST }}
+        run: pytest tests/
+
+  telegram-notify:
+    name: Send Telegram notification
+    runs-on: ubuntu-latest
+    needs: auto_tests
+    if: always()
+    steps:
+      - name: Send success message
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          message: |
+            ✅ Деплой проекта Kittygram успешно завершен!
+            
+            Пользователь: ${{ github.actor }}
+            Коммит: ${{ github.sha }}
+            
+            Проект доступен по адресу:
+            http://${{ secrets.HOST }}
