@@ -1,2 +1,34 @@
+# .gitignore
 
+# Секреты
+# Никогда не коммитьте переменные окружения!
+.env
+*.env
+
+# Python / Django
+__pycache__/
+*.pyc
+.venv/
+env/
+venv/
+# Папки, куда Django собирает статику и медиа.
+# Они генерируются автоматически.
+/backend/collected_static/
+/media/
+
+# Frontend (Node.js)
+# Эта папка может весить гигабайты, она восстанавливается из package.json
+node_modules/
+# Результат сборки фронтенда (если вы собираете его локально)
+/frontend/build/
+/frontend/dist/
+.npm
+npm-debug.log*
+
+# Артефакты операционной системы
 .DS_Store
+Thumbs.db
+
+# Конфигурация IDE
+.vscode/
+.idea/

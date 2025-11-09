@@ -1,0 +1,21 @@
+# backend/.dockerignore
+
+# Всегда игнорируем Git и Docker файлы.
+.git
+.gitignore
+.dockerignore
+Dockerfile
+
+# Конфигурация IDE и локальные артефакты
+.vscode/
+.idea/
+__pycache__/
+*.pyc
+
+# Виртуальное окружение
+.venv
+env
+venv
+
+# Секреты и локальные настройки
+.env
