@@ -145,11 +145,11 @@ jobs:
               --password-stdin
 
             # Скачиваем свежие версии образов из Docker Hub
-            sudo docker-compose -f docker-compose.production.yml pull
+            sudo docker compose -f docker-compose.production.yml pull
             
             # Останавливаем старые контейнеры, если они были, и пересоздаем новые
             # Миграции применятся автоматически благодаря 'command' в backend-сервисе
-            sudo docker-compose -f docker-compose.production.yml up -d
+            sudo docker compose -f docker-compose.production.yml up -d
             
             # Удаляем старые, неиспользуемые образы
             sudo docker image prune -f
