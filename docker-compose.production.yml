@@ -26,7 +26,7 @@ services:
   # Имя и описание контейнера с бэкендом:
   backend:
     # Из какого Dockerfile собирать образ для этого контейнера:
-    image: ${{DOCKERHUB_USERNAME}}/kittygram_backend:latest
+    image: ${DOCKERHUB_USERNAME}/kittygram_backend:latest
     env_file: .env
     # Какие контейнеры нужно запустить до старта этого контейнера:
     volumes:
@@ -42,12 +42,12 @@ services:
   # Имя третьего контейнера. Это контейнер с фронтендом:
   frontend:
     env_file: .env
-    image: ${{DOCKERHUB_USERNAME}}/kittygram_frontend:latest
+    image: ${DOCKERHUB_USERNAME}/kittygram_frontend:latest
     volumes:
       - static:/app/static/
 
   gateway:
-    image: ${{DOCKERHUB_USERNAME}}/kittygram_gateway:latest
+    image: ${DOCKERHUB_USERNAME}/kittygram_gateway:latest
     volumes:
           - static:/usr/share/nginx/html/static/:ro
           - media:/usr/share/nginx/html/media/:ro
