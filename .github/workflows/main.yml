@@ -184,7 +184,7 @@ jobs:
           python-version: 3.9
 
       - name: Install test dependencies
-        run: pip install requests pytest
+        run: pip install requests pytest pyyaml
 
       - name: Run API tests
         env:
