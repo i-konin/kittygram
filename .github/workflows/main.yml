@@ -21,9 +21,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # Устанавливаем и flake8, и зависимости для тестов (pytest, pyyaml)
           pip install flake8==6.0.0 pytest pyyaml
-          # Устанавливаем зависимости Django для pytest.ini
           pip install -r ./backend/requirements.txt
 
       - name: Test with flake8
