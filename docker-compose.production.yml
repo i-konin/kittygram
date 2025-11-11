@@ -3,14 +3,9 @@ volumes:
   static:
   media:
 
-# Перечень контейнеров:
 services:
-  # Имя и описание первого контейнера; имя выбирает разработчик. 
-  # Это контейнер с базой данных:
   postgres:
-    # Из какого образа запустить контейнер:
     image: postgres:13.10
-    # Файл (или список файлов) с переменными окружения:
     env_file: .env 
     environment:
       - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
@@ -23,31 +18,25 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-  # Имя и описание контейнера с бэкендом:
+
   backend:
-    # Из какого Dockerfile собирать образ для этого контейнера:
-    image: ${DOCKERHUB_USERNAME}/kittygram_backend:latest
+    image: ${DOCKERHUB_USERNAME}/kittygram_backend:${IMAGE_TAG:-latest}
     env_file: .env
-    # Какие контейнеры нужно запустить до старта этого контейнера:
     volumes:
       - static:/app/collected_static/
       - media:/app/media/
     depends_on:
       postgres:
         condition: service_healthy
-    command: >
-      sh -c "python manage.py migrate &&
-             python manage.py collectstatic --noinput &&
-             gunicorn kittygram_backend.wsgi:application --bind 0.0.0.0:8001"
-  # Имя третьего контейнера. Это контейнер с фронтендом:
+
   frontend:
     env_file: .env
-    image: ${DOCKERHUB_USERNAME}/kittygram_frontend:latest
+    image: ${DOCKERHUB_USERNAME}/kittygram_frontend:${IMAGE_TAG:-latest}
     volumes:
       - static:/app/static/
 
   gateway:
-    image: ${DOCKERHUB_USERNAME}/kittygram_gateway:latest
+    image: ${DOCKERHUB_USERNAME}/kittygram_gateway:${IMAGE_TAG:-latest}
     volumes:
           - static:/usr/share/nginx/html/static/:ro
           - media:/usr/share/nginx/html/media/:ro

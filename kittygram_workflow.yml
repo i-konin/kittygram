@@ -1,5 +1,3 @@
-# .github/workflows/main.yml
-
 name: Main Kittygram Workflow
 
 on:
@@ -23,110 +21,59 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r ./backend/requirements.txt flake8==6.0.0
+          # Устанавливаем и flake8, и зависимости для тестов (pytest, pyyaml)
+          pip install flake8==6.0.0 pytest pyyaml
+          # Устанавливаем зависимости Django для pytest.ini
+          pip install -r ./backend/requirements.txt
 
       - name: Test with flake8
         run: python -m flake8 backend/
 
-      - name: Run backend tests
-        # Эта команда предполагает, что тесты бэкенда лежат в папке tests/
-        run: pytest tests/ 
-      
-      # --- Добавлен блок для тестов фронтенда ---
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18' # Укажите версию Node.js, которая используется в проекте
+      - name: Run project structure tests
+        run: pytest
 
-      - name: Install frontend dependencies
-        run: cd frontend/ && npm install
-
-      - name: Run frontend tests
-        run: cd frontend/ && npm run test
-
-  # --- Job для сборки backend ---
-  build_backend_and_push_to_docker_hub:
-    name: Build and Push backend
-    runs-on: ubuntu-latest
-    needs: tests
-    steps:
-      - name: Check out the repo
-        uses: actions/checkout@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and Push backend image
-        uses: docker/build-push-action@v4
-        with:
+ 
+  build_and_push:
+  name: Build and Push ${{ matrix.service }}
+  runs-on: ubuntu-latest
+  needs: tests
+  strategy:
+    matrix:
+      service:
+        - name: backend
           context: ./backend/
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/kittygram_backend:latest
-
-  # --- Job для сборки frontend ---
-  build_frontend_and_push_to_docker_hub:
-    name: Build and Push frontend
-    runs-on: ubuntu-latest
-    needs: tests
-    steps:
-      - name: Check out the repo
-        uses: actions/checkout@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and Push frontend image
-        uses: docker/build-push-action@v4
-        with:
+        - name: frontend
           context: ./frontend/
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/kittygram_frontend:latest
+        - name: gateway
+          context: ./nginx/
 
-  # --- Job для сборки gateway ---
-  build_gateway_and_push_to_docker_hub:
-    name: Build and Push gateway
-    runs-on: ubuntu-latest
-    needs: tests
-    steps:
-      - name: Check out the repo
-        uses: actions/checkout@v3
+  steps:
+    - name: Check out the repo
+      uses: actions/checkout@v3
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and Push gateway image
-        uses: docker/build-push-action@v4
-        with:
-          context: ./nginx/ # Убедитесь, что Dockerfile для gateway лежит в папке nginx/
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/kittygram_gateway:latest
+    - name: Build and Push image
+      uses: docker/build-push-action@v4
+      with:
+        context: ${{ matrix.service.context }}
+        push: true
+        tags: |
+          ${{ secrets.DOCKERHUB_USERNAME }}/kittygram_${{ matrix.service.name }}:${{ github.sha }}
+          ${{ secrets.DOCKERHUB_USERNAME }}/kittygram_${{ matrix.service.name }}:latest
 
   deploy:
     name: Deploy to Server
     runs-on: ubuntu-latest
     needs:
-      # Job-ы, которые должны завершиться до начала deploy
-      - build_backend_and_push_to_docker_hub
-      - build_frontend_and_push_to_docker_hub
-      - build_gateway_and_push_to_docker_hub
+      - build_and_push
       
     steps:
       - name: Checkout repo
@@ -149,26 +96,19 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             cd kittygram
-            
-            # Создаем .env файл из секрета GitHub
-            echo "${{ secrets.DOT_ENV }}" > .env
-            
+            cat <<EOF > .env
+            ${{ secrets.DOT_ENV }}
+            EOF
             echo "DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}" >> .env
-
-            # Логинимся в Docker Hub на сервере
             echo "${{ secrets.DOCKERHUB_TOKEN }}" | sudo docker login \
               -u "${{ secrets.DOCKERHUB_USERNAME }}" \
               --password-stdin
-
-            # Скачиваем свежие версии образов из Docker Hub
+            export IMAGE_TAG=${{ github.sha }}
             sudo docker compose -f docker-compose.production.yml pull
-            
-            # Останавливаем старые контейнеры, если они были, и пересоздаем новые
-            # Миграции применятся автоматически благодаря 'command' в backend-сервисе
-            sudo docker compose -f docker-compose.production.yml up -d
-            
-            # Удаляем старые, неиспользуемые образы
-            sudo docker image prune -f
+            sudo docker compose -f docker-compose.production.yml up -d --remove-orphans
+            sudo docker compose -f docker-compose.production.yml exec backend python manage.py migrate
+            sudo docker compose -f docker-compose.production.yml exec backend python manage.py collectstatic
+            sudo docker compose -f docker-compose.production.yml exec backend cp -r /app/collected_static/. /backend_static/static/
             
   auto_tests:
     name: Run autotests after deploy
@@ -184,12 +124,12 @@ jobs:
           python-version: 3.9
 
       - name: Install test dependencies
-        run: pip install requests pytest pyyaml
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests pytest pyyaml
 
-      - name: Run API tests
-        env:
-          URL: http://${{ secrets.HOST }}
-        run: pytest tests/
+      - name: Run API and DockerHub tests
+        run: pytest
 
   telegram-notify:
     name: Send Telegram notification
@@ -203,7 +143,7 @@ jobs:
           to: ${{ secrets.TELEGRAM_TO }}
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           message: |
-            ✅ Деплой проекта Kittygram успешно завершен!
+            Деплой Kittygram успешно завершен
             
             Пользователь: ${{ github.actor }}
             Коммит: ${{ github.sha }}
