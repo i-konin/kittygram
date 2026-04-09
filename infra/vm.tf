@@ -22,6 +22,8 @@ resource "yandex_compute_instance" "vm_1" {
   }
 
   metadata = {
-    ssh-keys = "ubuntu:${file("./kitty_key.pub")}" 
+    user-data = templatefile("${path.module}/init/vm-install.yml", {
+      ssh_key = var.ssh_key
+    })
   }
 }

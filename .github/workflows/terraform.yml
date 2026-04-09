@@ -47,6 +47,21 @@ jobs:
         run: terraform apply -auto-approve
         working-directory: ./infra
 
+      - name: Save IP
+        if: ${{ github.event.inputs.action == 'apply' }}
+        run: |
+          # Вытаскиваем IP из вывода терраформа и убираем лишние кавычки
+          VM_IP=$(terraform output -raw vm_public_ip)
+          echo "$VM_IP" > vm-ip.txt
+        working-directory: ./infra
+
+      - name: Upload IP
+        if: ${{ github.event.inputs.action == 'apply' }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: server-ip
+          path: ./infra/vm-ip.txt
+
       - name: Terraform Destroy
         if: ${{ github.event.inputs.action == 'destroy' }}
         run: terraform destroy -auto-approve
