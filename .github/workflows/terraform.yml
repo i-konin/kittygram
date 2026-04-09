@@ -29,7 +29,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.SECRET_KEY }}
 
       - name: Terraform Action
-        run: terraform ${{ github.event.inputs.action }} -auto-approve
+        run: terraform ${{ github.event.inputs.action }}
         working-directory: ./infra
         env:
           YC_TOKEN: ${{ secrets.YC_TOKEN }}
