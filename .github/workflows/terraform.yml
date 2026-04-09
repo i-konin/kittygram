@@ -48,15 +48,15 @@ jobs:
         working-directory: ./infra
 
       - name: Save IP
-        if: ${{ github.event.inputs.action == 'apply' }}  && success()
+        if: github.event.inputs.action == 'apply' && success()
         run: |
           # Вытаскиваем IP из вывода терраформа и убираем лишние кавычки
-          VM_IP=$(terraform output -raw vm_public_ip)
+          VM_IP=$(terraform output -raw vm_public_ip | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -1)
           echo "$VM_IP" > vm-ip.txt
         working-directory: ./infra
 
       - name: Upload IP
-        if: ${{ github.event.inputs.action == 'apply' }}  && success()
+        if: github.event.inputs.action == 'apply' && success()
         uses: actions/upload-artifact@v4
         with:
           name: server-ip
