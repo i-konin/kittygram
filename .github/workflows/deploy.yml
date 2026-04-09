@@ -39,6 +39,7 @@ jobs:
   tests:
     name: Run tests and linters
     runs-on: ubuntu-latest
+    needs: entry
     if: needs.entry.outputs.run == 'true'
     steps:
       - name: Check out code
