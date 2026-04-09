@@ -1,0 +1,37 @@
+name: Terraform
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Select action'
+        required: true
+        default: 'plan'
+        options:
+          - plan
+          - apply
+          - destroy
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: ./infra
+        env:
+          ARM_ACCESS_KEY: ${{ secrets.ACCESS_KEY }}
+          ARM_SECRET_KEY: ${{ secrets.SECRET_KEY }}
+
+      - name: Terraform Action
+        run: terraform ${{ github.event.inputs.action }} -auto-approve
+        working-directory: ./infra
+        env:
+          YC_TOKEN: ${{ secrets.YC_TOKEN }}
+          YC_CLOUD_ID: ${{ secrets.YC_CLOUD_ID }}
+          YC_FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
