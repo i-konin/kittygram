@@ -37,6 +37,7 @@ variable "aws_region" {
 variable "ssh_key" {
   description = "SSH Public Key"
   type        = string
+  default = "./kitty_key.pub"
 }
 
 variable "cloud_id" {
