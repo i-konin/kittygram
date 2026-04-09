@@ -29,5 +29,5 @@ provider "yandex" {
   token     = var.yc_token      # Используем токен напрямую
   cloud_id  = var.cloud_id
   folder_id = var.folder_id
-  zone      = var.aws_region
+  zone      = var.zone
 }
