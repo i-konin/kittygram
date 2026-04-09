@@ -97,3 +97,7 @@ variable "nat" {
   type        = bool
   default     = true
 }
+
+variable "yc_token" {
+  type = string
+}
