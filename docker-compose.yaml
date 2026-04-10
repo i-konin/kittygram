@@ -3,9 +3,14 @@ volumes:
   static:
   media:
 
+networks:
+  kittygram_network:
+
 services:
   postgres:
     image: postgres:13.10
+    networks:
+      - kittygram_network
     env_file: .env 
     environment:
       - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
@@ -21,6 +26,8 @@ services:
 
   backend:
     build: ./backend/
+    networks:
+      - kittygram_network
     env_file: .env
     volumes:
       - static:/app/collected_static/
@@ -35,12 +42,16 @@ services:
   frontend:
     env_file: .env
     build: ./frontend/
+    networks:
+      - kittygram_network
     volumes:
       - static:/app/static/
 
   gateway:
     build:
       context: ./nginx/
+    networks:
+      - kittygram_network
     volumes:
           - static:/usr/share/nginx/html/static/:ro
           - media:/usr/share/nginx/html/media/:ro
