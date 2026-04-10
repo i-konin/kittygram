@@ -87,14 +87,14 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # - name: Build and Push image
-      #   uses: docker/build-push-action@v4
-      #   with:
-      #     context: ${{ matrix.service.context }}
-      #     push: true
-      #     tags: |
-      #       ${{ secrets.DOCKERHUB_USERNAME }}/kittygram_${{ matrix.service.name }}:${{ github.sha }}
-      #       ${{ secrets.DOCKERHUB_USERNAME }}/kittygram_${{ matrix.service.name }}:latest
+      - name: Build and Push image
+        uses: docker/build-push-action@v4
+        with:
+          context: ${{ matrix.service.context }}
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/kittygram_${{ matrix.service.name }}:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/kittygram_${{ matrix.service.name }}:latest
 
   deploy:
     name: Deploy to Server
